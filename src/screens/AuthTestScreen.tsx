@@ -7,7 +7,6 @@ export default function AuthTestScreen() {
   const [password, setPassword] = useState('')
   const [session, setSession] = useState<any>(null)
 
-  // Checa se já tem sessão ativa
   useEffect(() => {
     const currentSession = supabase.auth.getSession()
     currentSession.then(res => setSession(res.data.session))
