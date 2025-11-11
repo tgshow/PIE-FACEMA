@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native'
-import { supabase } from '../services/supabase'
+import supabase from '../services/supabase'
 
 export default function AuthTestScreen() {
   const [email, setEmail] = useState('')
@@ -54,7 +54,7 @@ export default function AuthTestScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Teste Supabase Auth</Text>
+      <Text style={styles.title}></Text>
 
       {!session && (
         <>
