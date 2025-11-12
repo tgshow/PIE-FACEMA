@@ -2,6 +2,8 @@ import React, { useState } from 'react'
 import { View, Text, TouchableOpacity, Image, TextInput, StyleSheet, Alert } from 'react-native'
 import * as ImagePicker from 'expo-image-picker'
 import * as Location from 'expo-location'
+import styles from '../screens/styles'
+
 
 export default function HomeScreen() {
   const [photo, setPhoto] = useState<string | null>(null)
@@ -32,7 +34,7 @@ export default function HomeScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container1}>
       <Text style={styles.title}>Nova Denúncia</Text>
       <TouchableOpacity style={styles.button} onPress={pickImage}>
         <Text style={styles.buttonText}>Tirar Foto</Text>
@@ -40,7 +42,7 @@ export default function HomeScreen() {
       {photo && <Image source={{ uri: photo }} style={styles.image} />}
       <TextInput
         placeholder="Descreva o problema..."
-        style={styles.input}
+        style={styles.input2}
         value={description}
         onChangeText={setDescription}
       />
@@ -55,12 +57,12 @@ export default function HomeScreen() {
   )
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: '#fff' },
-  title: { fontSize: 24, fontWeight: 'bold', textAlign: 'center', marginVertical: 10 },
-  button: { backgroundColor: '#007AFF', padding: 12, borderRadius: 8, marginVertical: 8 },
-  buttonText: { color: '#fff', textAlign: 'center', fontWeight: 'bold' },
-  image: { width: '100%', height: 200, marginVertical: 10, borderRadius: 8 },
-  input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12, marginVertical: 10 },
-  location: { textAlign: 'center', marginTop: 10, color: '#555' },
-})
+// const styles = StyleSheet.create({
+//   container: { flex: 1, padding: 20, backgroundColor: '#fff' },
+//   title: { fontSize: 24, fontWeight: 'bold', textAlign: 'center', marginVertical: 10 },
+//   button: { backgroundColor: '#007AFF', padding: 12, borderRadius: 8, marginVertical: 8 },
+//   buttonText: { color: '#fff', textAlign: 'center', fontWeight: 'bold' },
+//   image: { width: '100%', height: 200, marginVertical: 10, borderRadius: 8 },
+//   input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12, marginVertical: 10 },
+//   location: { textAlign: 'center', marginTop: 10, color: '#555' },
+// })

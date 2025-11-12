@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react'
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native'
 import supabase from '../services/supabase'
 
+import styles from '../screens/styles'
+
 export default function AuthTestScreen() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [session, setSession] = useState<any>(null)
-
   useEffect(() => {
     const currentSession = supabase.auth.getSession()
     currentSession.then(res => setSession(res.data.session))
@@ -93,12 +94,3 @@ export default function AuthTestScreen() {
     </View>
   )
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
-  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 20 },
-  input: { width: '100%', backgroundColor: '#fff', padding: 12, borderRadius: 8, marginBottom: 10 },
-  button: { backgroundColor: '#007AFF', padding: 14, borderRadius: 8, width: '100%', marginTop: 5 },
-  buttonText: { color: '#fff', textAlign: 'center', fontWeight: 'bold' },
-  sessionText: { fontSize: 18, marginBottom: 20 }
-})
