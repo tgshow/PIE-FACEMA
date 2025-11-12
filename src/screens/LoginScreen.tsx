@@ -1,37 +1,48 @@
-import React, { useState } from 'react'
-import { View, Text, TouchableOpacity, Alert, StyleSheet } from 'react-native'
-import { Input } from '../components/Input'
-import { supabase } from '../lib/supabase'
+import React, { useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { supabase } from '../lib/supabase';
 
-export default function LoginScreen({ navigation }: any) {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+export default function LoginUser() {
+  const [email, setEmail] = useState('');
+  const [senha, setSenha] = useState('');
 
   async function handleLogin() {
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) return Alert.alert('Erro', error.message)
-    navigation.replace('Home')
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password: senha,
+    });
+
+    if (error) alert(error.message);
+    else alert('Login realizado com sucesso!');
   }
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Entrar</Text>
-      <Input placeholder="E-mail" value={email} onChangeText={setEmail} />
-      <Input placeholder="Senha" value={password} onChangeText={setPassword} secureTextEntry />
-      <TouchableOpacity style={styles.button} onPress={handleLogin}>
-        <Text style={styles.buttonText}>Entrar</Text>
-      </TouchableOpacity>
-      <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-        <Text style={styles.link}>Criar conta</Text>
+      <Text style={styles.titulo}>Login de Usuário</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="E-mail"
+        value={email}
+        onChangeText={setEmail}
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="Senha"
+        secureTextEntry
+        value={senha}
+        onChangeText={setSenha}
+      />
+      <TouchableOpacity style={styles.botao} onPress={handleLogin}>
+        <Text style={styles.textoBotao}>Entrar</Text>
       </TouchableOpacity>
     </View>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', padding: 20, backgroundColor: '#f5f5f5' },
-  title: { fontSize: 26, fontWeight: 'bold', textAlign: 'center', marginBottom: 20 },
-  button: { backgroundColor: '#007AFF', padding: 14, borderRadius: 8, marginTop: 10 },
-  buttonText: { color: '#fff', textAlign: 'center', fontWeight: 'bold' },
-  link: { color: '#007AFF', textAlign: 'center', marginTop: 20 },
-})
+  container: { padding: 20 },
+  titulo: { fontSize: 20, fontWeight: 'bold', marginBottom: 15, textAlign: 'center' },
+  input: { borderWidth: 1, borderColor: '#ccc', padding: 10, borderRadius: 8, marginBottom: 10 },
+  botao: { backgroundColor: '#007bff', padding: 12, borderRadius: 8, alignItems: 'center' },
+  textoBotao: { color: '#fff', fontWeight: 'bold' },
+});

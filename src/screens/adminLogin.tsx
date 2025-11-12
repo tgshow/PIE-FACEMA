@@ -1,20 +1,14 @@
 import React, { useState } from "react";
-import { View, TextInput, Text, TouchableOpacity, Alert } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet } from "react-native";
 import { supabase } from "../lib/supabase";
-import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import type { RootStackParamList } from "../../App";
 
-// Define o tipo das rotas
-type RootStackParamList = {
-  AdminLogin: undefined;
-  PainelAdmin: undefined;
-};
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, "AdminDashboard">;
 
-// Tipagem do navigation
-type AdminLoginScreenProp = {
-  navigation: NativeStackNavigationProp<RootStackParamList, "AdminLogin">;
-};
-
-export default function AdminLogin({ navigation }: AdminLoginScreenProp) {
+export default function LoginAdmin() {
+  const navigation = useNavigation<NavigationProp>();
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
 
@@ -24,49 +18,73 @@ export default function AdminLogin({ navigation }: AdminLoginScreenProp) {
       password: senha,
     });
 
-    if (error) {
-      Alert.alert("Erro", error.message);
-      return;
-    }
+    if (error) return alert(error.message);
 
     const user = data.user;
 
-    if (user && user.user_metadata.role === "admin") {
-      navigation.navigate("PainelAdmin");
+    // Busca o perfil e verifica se o usuário é admin
+    const { data: perfil, error: perfilError } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    if (perfilError) {
+      console.error(perfilError);
+      return alert("Erro ao verificar permissões.");
+    }
+
+    if (perfil?.role === "admin") {
+      alert("Bem-vindo, Administrador!");
+      navigation.navigate("AdminDashboard");
     } else {
-      Alert.alert("Acesso negado", "Você não é administrador!");
+      alert("Acesso negado: esta conta não é de administrador.");
+      await supabase.auth.signOut(); // Desloga automaticamente se não for admin
     }
   }
 
   return (
-    <View style={{ flex: 1, justifyContent: "center", padding: 20 }}>
-      <Text style={{ fontSize: 22, textAlign: "center", marginBottom: 20 }}>Login do Administrador</Text>
+    <View style={styles.container}>
+      <Text style={styles.titulo}>Login de Administrador</Text>
 
       <TextInput
-        placeholder="Email"
+        style={styles.input}
+        placeholder="E-mail"
         value={email}
         onChangeText={setEmail}
-        style={{ borderWidth: 1, padding: 10, borderRadius: 8, marginBottom: 10 }}
+        autoCapitalize="none"
       />
       <TextInput
+        style={styles.input}
         placeholder="Senha"
+        secureTextEntry
         value={senha}
         onChangeText={setSenha}
-        secureTextEntry
-        style={{ borderWidth: 1, padding: 10, borderRadius: 8 }}
       />
 
-      <TouchableOpacity
-        onPress={handleLogin}
-        style={{
-          backgroundColor: "#007AFF",
-          padding: 12,
-          borderRadius: 8,
-          marginTop: 20,
-        }}
-      >
-        <Text style={{ color: "#fff", textAlign: "center", fontWeight: "bold" }}>Entrar</Text>
+      <TouchableOpacity style={styles.botao} onPress={handleLogin}>
+        <Text style={styles.textoBotao}>Entrar</Text>
       </TouchableOpacity>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: { flex: 1, justifyContent: "center", padding: 20, backgroundColor: "#f7f7f7" },
+  titulo: { fontSize: 22, fontWeight: "bold", marginBottom: 20, textAlign: "center" },
+  input: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 10,
+    backgroundColor: "#fff",
+  },
+  botao: {
+    backgroundColor: "#007bff",
+    padding: 15,
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  textoBotao: { color: "#fff", fontWeight: "bold", fontSize: 16 },
+});
