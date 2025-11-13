@@ -8,6 +8,8 @@ import {
   Dimensions,
   StyleSheet,
   PanResponder,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
 import { supabase } from "../lib/supabase";
 
@@ -18,11 +20,11 @@ export default function LoginTabs({ navigation }: any) {
   const [password, setPassword] = useState("");
   const [adminEmail, setAdminEmail] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
+  const [activeTab, setActiveTab] = useState(0);
+  const [loading, setLoading] = useState(false);
 
-  const [activeTab, setActiveTab] = useState(0); // 0 = user, 1 = admin
   const translateX = useRef(new Animated.Value(0)).current;
 
-  // Função que faz o deslize animado entre abas
   const handleSlide = (index: number) => {
     setActiveTab(index);
     Animated.timing(translateX, {
@@ -32,7 +34,6 @@ export default function LoginTabs({ navigation }: any) {
     }).start();
   };
 
-  // Habilita deslizar com o dedo
   const panResponder = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (_, gestureState) =>
@@ -44,39 +45,72 @@ export default function LoginTabs({ navigation }: any) {
     })
   ).current;
 
-  // Login normal
+  // 🧍 Login de Usuário Comum
   const handleUserLogin = async () => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    if (error) alert(error.message);
-    else navigation.navigate("Home");
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        Alert.alert("Erro", error.message);
+        return;
+      }
+
+      navigation.replace("Home");
+    } catch (err) {
+      console.error(err);
+      Alert.alert("Erro", "Ocorreu um problema ao fazer login.");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Login ADM
+  // 👨‍💼 Login do Administrador
   const handleAdminLogin = async () => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: adminEmail,
-      password: adminPassword,
-    });
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: adminEmail,
+        password: adminPassword,
+      });
 
-    if (error) return alert(error.message);
+      if (error || !data?.user) {
+        Alert.alert("Erro", "Email ou senha incorretos.");
+        return;
+      }
 
-    // Verifica se o usuário é admin
-    const { data: userData } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", data.user?.id)
-      .single();
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("user_id", data.user.id)
+        .single();
 
-    if (userData?.role === "admin") navigation.navigate("AdminDashboard");
-    else alert("Acesso negado. Conta não é de administrador.");
+      if (profileError || !profile) {
+        Alert.alert("Erro", "Erro ao verificar o perfil do usuário.");
+        return;
+      }
+
+      if (profile.role?.toLowerCase().trim() !== "admin") {
+        Alert.alert("Acesso negado", "Essa conta não é de administrador.");
+        await supabase.auth.signOut();
+        return;
+      }
+
+      navigation.replace("AdminDashboard");
+    } catch (err) {
+      console.error(err);
+      Alert.alert("Erro", "Erro inesperado ao tentar login de administrador.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <View style={styles.container} {...panResponder.panHandlers}>
-      {/* Indicadores de aba */}
+      {/* Cabeçalho das abas */}
       <View style={styles.tabHeader}>
         <Text
           style={[styles.tabText, activeTab === 0 && styles.activeTab]}
@@ -92,24 +126,22 @@ export default function LoginTabs({ navigation }: any) {
         </Text>
       </View>
 
-      {/* Áreas de login animadas */}
       <Animated.View
-        style={[
-          styles.sliderContainer,
-          {
-            transform: [{ translateX }],
-          },
-        ]}
+        style={[styles.sliderContainer, { transform: [{ translateX }] }]}
       >
-        {/* Login Usuário */}
+        {/* 🧍 Aba Usuário */}
         <View style={styles.tabPage}>
           <Text style={styles.title}>Login do Usuário</Text>
+
           <TextInput
             style={styles.input}
             placeholder="E-mail"
             value={email}
             onChangeText={setEmail}
+            autoCapitalize="none"
+            keyboardType="email-address"
           />
+
           <TextInput
             style={styles.input}
             placeholder="Senha"
@@ -117,23 +149,43 @@ export default function LoginTabs({ navigation }: any) {
             value={password}
             onChangeText={setPassword}
           />
-          <TouchableOpacity style={styles.button} onPress={handleUserLogin}>
-            <Text style={styles.buttonText}>Entrar</Text>
+
+          <TouchableOpacity
+            style={[styles.button, loading && { backgroundColor: "#999" }]}
+            onPress={handleUserLogin}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.buttonText}>Entrar</Text>
+            )}
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation.navigate("Register")}>
-            <Text style={styles.link}>Não tem conta? Cadastre-se</Text>
+
+          {/* Link para cadastro */}
+          <TouchableOpacity
+            onPress={() => navigation.navigate("RegisterScreen")}
+            style={{ marginTop: 15 }}
+          >
+            <Text style={{ color: "#007bff", textAlign: "center" }}>
+              Criar nova conta
+            </Text>
           </TouchableOpacity>
         </View>
 
-        {/* Login ADM */}
+        {/* 👨‍💼 Aba Admin */}
         <View style={styles.tabPage}>
           <Text style={styles.title}>Login do Administrador</Text>
+
           <TextInput
             style={styles.input}
             placeholder="E-mail do admin"
             value={adminEmail}
             onChangeText={setAdminEmail}
+            autoCapitalize="none"
+            keyboardType="email-address"
           />
+
           <TextInput
             style={styles.input}
             placeholder="Senha"
@@ -141,13 +193,17 @@ export default function LoginTabs({ navigation }: any) {
             value={adminPassword}
             onChangeText={setAdminPassword}
           />
-          <TouchableOpacity style={styles.button} onPress={handleAdminLogin}>
-            <Text style={styles.buttonText}>Entrar como Admin</Text>
-          </TouchableOpacity>
 
-          {/* Botão de voltar com animação suave */}
-          <TouchableOpacity onPress={() => handleSlide(0)}>
-            <Text style={styles.link}>← Voltar para usuário</Text>
+          <TouchableOpacity
+            style={[styles.button, loading && { backgroundColor: "#999" }]}
+            onPress={handleAdminLogin}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.buttonText}>Entrar como Admin</Text>
+            )}
           </TouchableOpacity>
         </View>
       </Animated.View>
@@ -156,38 +212,21 @@ export default function LoginTabs({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f7f7f7",
-    justifyContent: "center",
-  },
+  container: { flex: 1, justifyContent: "center", backgroundColor: "#f7f7f7" },
   tabHeader: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    marginHorizontal: 40,
+    justifyContent: "space-around",
     marginBottom: 20,
   },
-  tabText: {
-    fontSize: 18,
-    color: "#999",
-  },
-  activeTab: {
-    color: "#000",
-    fontWeight: "bold",
-  },
-  sliderContainer: {
-    flexDirection: "row",
-    width: width * 2,
-  },
-  tabPage: {
-    width: width,
-    paddingHorizontal: 30,
-  },
+  tabText: { fontSize: 18, color: "#999" },
+  activeTab: { color: "#000", fontWeight: "bold" },
+  sliderContainer: { flexDirection: "row", width: width * 2 },
+  tabPage: { width: width, paddingHorizontal: 30 },
   title: {
     fontSize: 22,
     fontWeight: "bold",
-    marginBottom: 20,
     textAlign: "center",
+    marginBottom: 20,
   },
   input: {
     backgroundColor: "#fff",
@@ -202,15 +241,6 @@ const styles = StyleSheet.create({
     padding: 15,
     borderRadius: 10,
     alignItems: "center",
-    marginBottom: 10,
   },
-  buttonText: {
-    color: "#fff",
-    fontWeight: "bold",
-  },
-  link: {
-    color: "#007bff",
-    textAlign: "center",
-    marginTop: 10,
-  },
+  buttonText: { color: "#fff", fontWeight: "bold" },
 });
