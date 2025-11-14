@@ -14,45 +14,58 @@ export default function AdminDashboard({ navigation }: any) {
   const [loading, setLoading] = useState(true);
   const [adminEmail, setAdminEmail] = useState<string | null>(null);
 
-  // 1️⃣ Verifica se o usuário logado é admin
   useEffect(() => {
-    const verifyAdmin = async () => {
+    const checkAdmin = async () => {
       try {
+        // 🔹 Obtém usuário logado
         const {
           data: { user },
-          error,
+          error: userError,
         } = await supabase.auth.getUser();
 
-        if (error || !user) {
+        if (userError || !user) {
           Alert.alert("Sessão expirada", "Faça login novamente.");
-          navigation.replace("LoginAdm");
-          return;
+          return navigation.replace("LoginAdm");
         }
 
-        // Busca perfil no Supabase
+        // 🔹 Busca papel na tabela profiles
         const { data: profile, error: profileError } = await supabase
           .from("profiles")
           .select("role")
-          .eq("user_id", user.id)
-          .limit(1);
+          .eq("id", user.id) // <--- CORRETO
+          .single();
 
-        if (profileError || !profile || profile.length === 0) {
-          Alert.alert("Erro", "Não foi possível verificar o perfil do usuário.");
-          navigation.replace("LoginAdm");
-          return;
+        if (profileError) {
+          console.log("Erro ao buscar perfil:", profileError);
+          Alert.alert(
+            "Erro",
+            "Não foi possível carregar o perfil do usuário.\n\nDetalhe técnico: " +
+              (profileError.message ?? "erro desconhecido")
+          );
+          return navigation.replace("LoginAdm");
         }
 
-        const role = profile[0].role?.trim().toLowerCase();
+        if (!profile) {
+          Alert.alert(
+            "Perfil não encontrado",
+            "Usuário não tem registro na tabela de perfis."
+          );
+          return navigation.replace("LoginAdm");
+        }
+
+        // 🔹 Verifica se é admin
+        const role = profile.role?.toLowerCase().trim();
+
         if (role !== "admin") {
           Alert.alert("Acesso negado", "Você não tem permissão para acessar esta área.");
           await supabase.auth.signOut();
-          navigation.replace("LoginAdm");
-          return;
+          return navigation.replace("LoginAdm");
         }
 
+        // 🔹 Tudo ok
         setAdminEmail(user.email ?? null);
       } catch (err) {
-        console.error("Erro ao verificar admin:", err);
+        console.error("Erro ao validar admin:", err);
         Alert.alert("Erro interno", "Falha ao verificar autenticação.");
         navigation.replace("LoginAdm");
       } finally {
@@ -60,17 +73,15 @@ export default function AdminDashboard({ navigation }: any) {
       }
     };
 
-    verifyAdmin();
+    checkAdmin();
   }, []);
 
-  // 2️⃣ Função de logout
   const handleLogout = async () => {
     await supabase.auth.signOut();
     Alert.alert("Sessão encerrada", "Você saiu do painel do administrador.");
     navigation.replace("LoginAdm");
   };
 
-  // 3️⃣ Exibição enquanto carrega
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -80,7 +91,6 @@ export default function AdminDashboard({ navigation }: any) {
     );
   }
 
-  // 4️⃣ Painel principal do administrador
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>Painel do Administrador</Text>

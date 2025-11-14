@@ -36,39 +36,37 @@ export default function LoginTabs({ navigation }: any) {
 
   const panResponder = useRef(
     PanResponder.create({
-      onMoveShouldSetPanResponder: (_, gestureState) =>
-        Math.abs(gestureState.dx) > 20,
-      onPanResponderRelease: (_, gestureState) => {
-        if (gestureState.dx < -50 && activeTab === 0) handleSlide(1);
-        else if (gestureState.dx > 50 && activeTab === 1) handleSlide(0);
+      onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 20,
+      onPanResponderRelease: (_, g) => {
+        if (g.dx < -50 && activeTab === 0) handleSlide(1);
+        else if (g.dx > 50 && activeTab === 1) handleSlide(0);
       },
     })
   ).current;
 
-  // 🧍 Login de Usuário Comum
+  // 🧍 Login usuário comum
   const handleUserLogin = async () => {
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (error) {
-        Alert.alert("Erro", error.message);
+      if (error || !data?.user) {
+        Alert.alert("Erro", error?.message || "Falha no login.");
         return;
       }
 
       navigation.replace("Home");
     } catch (err) {
-      console.error(err);
-      Alert.alert("Erro", "Ocorreu um problema ao fazer login.");
+      Alert.alert("Erro", "Problema inesperado no login.");
     } finally {
       setLoading(false);
     }
   };
 
-  // 👨‍💼 Login do Administrador
+  // 👨‍💼 LOGIN ADMIN (corrigido)
   const handleAdminLogin = async () => {
     setLoading(true);
     try {
@@ -82,23 +80,36 @@ export default function LoginTabs({ navigation }: any) {
         return;
       }
 
-      const { data: profile, error: profileError } = await supabase
+      const userId = data.user.id;
+
+      // 🔍 Busca perfil CORRETO (id)
+      const { data: profile } = await supabase
         .from("profiles")
         .select("role")
-        .eq("user_id", data.user.id)
-        .single();
+        .eq("id", userId)
+        .maybeSingle();
 
-      if (profileError || !profile) {
-        Alert.alert("Erro", "Erro ao verificar o perfil do usuário.");
+      // ⚠️ Se perfil não existir → criar automaticamente
+      if (!profile) {
+        await supabase.from("profiles").insert([
+          { id: userId, role: "user" }, // padrão
+        ]);
+
+        Alert.alert(
+          "Erro",
+          "Seu perfil não existia, foi criado agora. Peça ao suporte para torná-lo admin."
+        );
         return;
       }
 
+      // ❌ Se não for admin → bloqueia
       if (profile.role?.toLowerCase().trim() !== "admin") {
         Alert.alert("Acesso negado", "Essa conta não é de administrador.");
         await supabase.auth.signOut();
         return;
       }
 
+      // ✔ Tudo certo → entra no painel admin
       navigation.replace("AdminDashboard");
     } catch (err) {
       console.error(err);
@@ -110,7 +121,6 @@ export default function LoginTabs({ navigation }: any) {
 
   return (
     <View style={styles.container} {...panResponder.panHandlers}>
-      {/* Cabeçalho das abas */}
       <View style={styles.tabHeader}>
         <Text
           style={[styles.tabText, activeTab === 0 && styles.activeTab]}
@@ -129,7 +139,7 @@ export default function LoginTabs({ navigation }: any) {
       <Animated.View
         style={[styles.sliderContainer, { transform: [{ translateX }] }]}
       >
-        {/* 🧍 Aba Usuário */}
+        {/* USUÁRIO */}
         <View style={styles.tabPage}>
           <Text style={styles.title}>Login do Usuário</Text>
 
@@ -162,7 +172,6 @@ export default function LoginTabs({ navigation }: any) {
             )}
           </TouchableOpacity>
 
-          {/* Link para cadastro */}
           <TouchableOpacity
             onPress={() => navigation.navigate("RegisterScreen")}
             style={{ marginTop: 15 }}
@@ -173,7 +182,7 @@ export default function LoginTabs({ navigation }: any) {
           </TouchableOpacity>
         </View>
 
-        {/* 👨‍💼 Aba Admin */}
+        {/* ADMIN */}
         <View style={styles.tabPage}>
           <Text style={styles.title}>Login do Administrador</Text>
 
